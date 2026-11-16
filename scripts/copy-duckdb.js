@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const src = path.join(__dirname, 'node_modules', '@duckdb', 'duckdb-wasm', 'dist');
-const dest = path.join(__dirname, 'public', 'duckdb');
+const src = path.join(__dirname, '..', 'node_modules', '@duckdb', 'duckdb-wasm', 'dist');
+const dest = path.join(__dirname, '..', 'public', 'duckdb');
 
 const files = [
   'duckdb-eh.wasm',
