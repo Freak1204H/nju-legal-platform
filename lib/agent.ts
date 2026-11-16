@@ -166,11 +166,19 @@ export async function runAgent(
       const toolCalls = Array.from(toolCallsMap.values());
 
       // 先推送 assistant 消息（含工具调用）
+      // 注意：回填给 LLM 时必须转换为 OpenAI 标准格式（含 type 与 function 嵌套）
       messages.push({
         role: 'assistant',
-        content: contentChunks,
-        tool_calls: toolCalls,
-      });
+        content: contentChunks || null,
+        tool_calls: toolCalls.map((tc) => ({
+          id: tc.id,
+          type: 'function',
+          function: {
+            name: tc.name,
+            arguments: tc.arguments,
+          },
+        })),
+      } as any);
 
       for (const tc of toolCalls) {
         onEvent({ type: 'tool_call', toolName: tc.name, content: `正在执行 ${tc.name}…` });
