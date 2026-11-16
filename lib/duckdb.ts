@@ -27,22 +27,37 @@ let initialized = false;
 
 /**
  * 初始化 DuckDB 实例（幂等，全局单例）
- * 使用本地 public/duckdb 下的 wasm 与 worker，避免 CDN 跨域问题
+ * 使用本地 public/duckdb 下的 wasm 与 worker，并根据浏览器能力自动选择 eh/mvp 版本
  */
 export async function getDB(): Promise<duckdb.AsyncDuckDB> {
   if (initialized && db && conn) return db;
 
-  // 手动构造 bundle，指向本地静态资源
-  const bundle: duckdb.DuckDBBundle = {
-    mainModule: new URL('/duckdb/duckdb-eh.wasm', window.location.origin).href,
-    mainWorker: new URL('/duckdb/duckdb-browser-eh.worker.js', window.location.origin).href,
-    pthreadWorker: null,
+  const origin = window.location.origin;
+
+  // 构造本地 bundles，让官方 selectBundle 根据平台特性选择
+  const bundles: duckdb.DuckDBBundles = {
+    mvp: {
+      mainModule: `${origin}/duckdb/duckdb-mvp.wasm`,
+      mainWorker: `${origin}/duckdb/duckdb-browser-mvp.worker.js`,
+    },
+    eh: {
+      mainModule: `${origin}/duckdb/duckdb-eh.wasm`,
+      mainWorker: `${origin}/duckdb/duckdb-browser-eh.worker.js`,
+    },
   };
+
+  const bundle = await duckdb.selectBundle(bundles);
 
   worker = new Worker(bundle.mainWorker!);
   const logger = new duckdb.ConsoleLogger();
   db = new duckdb.AsyncDuckDB(logger, worker);
-  await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+
+  // 加超时保护：wasm 较大（约 33MB），首次加载可能较慢
+  const instantiatePromise = db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('DuckDB 加载超时，请刷新页面重试')), 60000)
+  );
+  await Promise.race([instantiatePromise, timeout]);
 
   conn = await db.connect();
   initialized = true;
