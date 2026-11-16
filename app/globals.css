@@ -23,68 +23,146 @@
 .typing-cursor::after {
   content: '▍';
   animation: blink 1s step-start infinite;
-  color: #1d4ed8;
+  color: #3366ff;
 }
 
 /* 淡入动画 */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in {
-  animation: fadeInUp 0.3s ease-out;
+  animation: fadeInUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 柔和的脉冲（加载点） */
+@keyframes softPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+.animate-soft-pulse {
+  animation: softPulse 1.2s ease-in-out infinite;
+}
+
+/* 思考中的三个点 */
+.thinking-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.thinking-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+  animation: softPulse 1.2s ease-in-out infinite;
+}
+.thinking-dots span:nth-child(2) { animation-delay: 0.15s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+/* 渐变品牌色工具类 */
+.brand-gradient {
+  background: linear-gradient(135deg, #2f54eb 0%, #5b8cff 55%, #7c9fff 100%);
+}
+.brand-gradient-soft {
+  background: linear-gradient(135deg, rgba(47, 84, 235, 0.08) 0%, rgba(91, 140, 255, 0.04) 100%);
+}
+.text-gradient {
+  background: linear-gradient(135deg, #2f54eb 0%, #5b8cff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 页面背景：微妙的放射渐变 */
+.page-bg {
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(91, 140, 255, 0.07) 0%, transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(201, 162, 39, 0.05) 0%, transparent 55%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* 卡片阴影 */
+.card-shadow {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 12px rgba(15, 23, 42, 0.05);
+}
+.card-shadow-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card-shadow-hover:hover {
+  box-shadow:
+    0 2px 4px rgba(15, 23, 42, 0.06),
+    0 12px 28px rgba(47, 84, 235, 0.1);
+  transform: translateY(-1px);
+}
+
+/* 用户气泡阴影 */
+.user-bubble-shadow {
+  box-shadow: 0 4px 14px rgba(47, 84, 235, 0.28);
 }
 
 /* Markdown 渲染样式 */
 .markdown-body {
   font-size: 0.875rem;
-  line-height: 1.7;
+  line-height: 1.75;
   color: #334155;
 }
-.markdown-body p { margin: 0.4rem 0; }
+.markdown-body p { margin: 0.5rem 0; }
 .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
   font-weight: 600;
-  margin: 0.8rem 0 0.4rem;
-  color: #1e293b;
+  margin: 1rem 0 0.5rem;
+  color: #0f172a;
+  letter-spacing: -0.01em;
 }
-.markdown-body h1 { font-size: 1.2rem; }
+.markdown-body h1 { font-size: 1.25rem; }
 .markdown-body h2 { font-size: 1.1rem; }
 .markdown-body h3 { font-size: 1rem; }
-.markdown-body ul, .markdown-body ol { padding-left: 1.2rem; margin: 0.4rem 0; }
-.markdown-body li { margin: 0.15rem 0; }
+.markdown-body ul, .markdown-body ol { padding-left: 1.2rem; margin: 0.5rem 0; }
+.markdown-body li { margin: 0.2rem 0; }
 .markdown-body ul li { list-style: disc; }
 .markdown-body ol li { list-style: decimal; }
 .markdown-body table {
   border-collapse: collapse;
-  margin: 0.6rem 0;
+  margin: 0.75rem 0;
   width: 100%;
   font-size: 0.8rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 .markdown-body th, .markdown-body td {
   border: 1px solid #e2e8f0;
-  padding: 0.4rem 0.6rem;
+  padding: 0.5rem 0.7rem;
   text-align: left;
 }
-.markdown-body th { background: #f1f5f9; font-weight: 600; }
+.markdown-body th { background: #f1f5f9; font-weight: 600; color: #334155; }
+.markdown-body tr:nth-child(even) td { background: #f8fafc; }
 .markdown-body code {
-  background: #f1f5f9;
-  padding: 0.1rem 0.3rem;
-  border-radius: 0.25rem;
+  background: #eef2ff;
+  color: #4f46e5;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.3rem;
   font-size: 0.8rem;
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
 }
 .markdown-body pre {
   background: #0f172a;
   color: #e2e8f0;
-  padding: 0.8rem;
-  border-radius: 0.5rem;
+  padding: 1rem;
+  border-radius: 0.6rem;
   overflow-x: auto;
-  margin: 0.6rem 0;
+  margin: 0.75rem 0;
 }
 .markdown-body pre code { background: transparent; padding: 0; color: inherit; }
 .markdown-body blockquote {
   border-left: 3px solid #3366ff;
-  padding-left: 0.8rem;
-  color: #64748b;
-  margin: 0.6rem 0;
+  background: #eef2ff;
+  padding: 0.5rem 0.9rem;
+  color: #475569;
+  margin: 0.75rem 0;
+  border-radius: 0 0.4rem 0.4rem 0;
 }
 .markdown-body strong { font-weight: 600; color: #0f172a; }
+.markdown-body a { color: #3366ff; text-decoration: underline; }

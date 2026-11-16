@@ -188,28 +188,32 @@ export default function Home() {
   }, [input, isStreaming, tableMeta, toolExecutor, scrollToBottom]);
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="page-bg flex h-screen flex-col">
       {/* 顶部导航 */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <header className="border-b border-slate-200/60 bg-white/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-white">
+            <div className="brand-gradient flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-md shadow-blue-500/20">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-800">律析</h1>
+              <h1 className="text-lg font-bold leading-tight tracking-tight text-slate-900">
+                律析
+              </h1>
               <p className="text-xs text-slate-500">AI 驱动的法律数据分析平台</p>
             </div>
           </div>
-          <div className="hidden items-center gap-2 sm:flex">
+          <div className="flex items-center gap-2">
             {tableMeta ? (
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600 ring-1 ring-emerald-200">
+              <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-600 ring-1 ring-emerald-200/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 数据已就绪 · {tableMeta.rowCount} 行
               </span>
             ) : (
-              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-600 ring-1 ring-amber-200">
+              <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-600 ring-1 ring-amber-200/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                 等待上传数据
               </span>
             )}
@@ -218,27 +222,31 @@ export default function Home() {
       </header>
 
       {/* 主体内容 */}
-      <main className="mx-auto flex w-full max-w-6xl flex-1 gap-6 overflow-hidden px-6 py-6">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 gap-6 overflow-hidden px-6 py-5">
         {/* 左侧：数据上传 + 说明 */}
-        <aside className="hidden w-72 shrink-0 overflow-y-auto lg:block">
+        <aside className="hidden w-72 shrink-0 overflow-y-auto pr-1 lg:block">
           <DataUpload onDataLoaded={setTableMeta} />
 
-          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="mb-2 text-sm font-semibold text-slate-700">可以这样问</h3>
-            <ul className="space-y-2 text-xs text-slate-500">
+          <div className="card-shadow mt-4 rounded-2xl border border-slate-200/70 bg-white p-5">
+            <h3 className="mb-1 text-sm font-semibold text-slate-800">可以这样问</h3>
+            <p className="mb-3 text-xs text-slate-400">点击下方问题快速填入</p>
+            <ul className="space-y-2 text-xs text-slate-600">
               {[
-                '「统计各类案件的判决数量」',
-                '「近五年案件数量趋势如何？」',
-                '「原告胜诉率最高的是哪类案件？」',
-                '「各地区案件分布占比」',
-                '「分析被告类型的构成」',
+                '统计各类案件的判决数量',
+                '近五年案件数量趋势如何？',
+                '原告胜诉率最高的是哪类案件？',
+                '各地区案件分布占比',
+                '分析被告类型的构成',
               ].map((q) => (
                 <li
                   key={q}
-                  className="cursor-pointer rounded-lg bg-slate-50 px-3 py-2 transition hover:bg-primary-50 hover:text-primary-600"
-                  onClick={() => !isStreaming && setInput(q.replace('「', '').replace('」', ''))}
+                  className="group flex cursor-pointer items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition hover:border-blue-200 hover:bg-blue-50/60"
+                  onClick={() => !isStreaming && setInput(q)}
                 >
-                  {q}
+                  <svg className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01" />
+                  </svg>
+                  <span className="group-hover:text-blue-600">{q}</span>
                 </li>
               ))}
             </ul>
@@ -246,59 +254,71 @@ export default function Home() {
         </aside>
 
         {/* 右侧：对话区 */}
-        <section className="flex flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <section className="card-shadow flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
           {/* 消息列表 */}
           <div className="flex-1 overflow-y-auto p-6">
             {messages.length === 0 && (
               <div className="flex h-full flex-col items-center justify-center text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
-                  <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="brand-gradient-soft mb-5 flex h-20 w-20 items-center justify-center rounded-3xl text-blue-500">
+                  <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
-                <h2 className="mb-2 text-lg font-semibold text-slate-700">开始你的法律数据分析</h2>
-                <p className="max-w-md text-sm text-slate-500">
+                <h2 className="mb-2 text-xl font-semibold tracking-tight text-slate-800">
+                  开始你的<span className="text-gradient">法律数据分析</span>
+                </h2>
+                <p className="max-w-md text-sm leading-relaxed text-slate-500">
                   先上传法律数据文件（或使用左侧示例），然后用自然语言提问，
                   律析会自主查询数据并生成可视化图表
                 </p>
               </div>
             )}
 
-            <div className="space-y-5">
+            <div className="space-y-6">
               {messages.map((m) => (
                 <div
                   key={m.id}
                   className={`animate-fade-in flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {m.role === 'user' ? (
-                    <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-primary-600 px-4 py-3 text-sm text-white">
+                    <div className="user-bubble-shadow max-w-[80%] rounded-2xl rounded-tr-md bg-gradient-to-br from-blue-600 to-blue-500 px-4 py-3 text-sm leading-relaxed text-white">
                       {m.content}
                     </div>
                   ) : (
-                    <div className="max-w-[85%] space-y-3">
-                      <div className="rounded-2xl rounded-tl-sm bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700 ring-1 ring-slate-100">
-                        {m.streaming && !m.content ? (
-                          <span className="text-slate-400">正在思考…</span>
-                        ) : (
-                          <div className="markdown-body max-w-none">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {m.content}
-                            </ReactMarkdown>
-                            {m.streaming && <span className="typing-cursor" />}
+                    <div className="flex max-w-[88%] gap-3">
+                      {/* AI 头像 */}
+                      <div className="brand-gradient mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white shadow-sm">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-3">
+                        <div className="rounded-2xl rounded-tl-md bg-slate-50/80 px-4 py-3 text-sm leading-relaxed text-slate-700 ring-1 ring-slate-100">
+                          {m.streaming && !m.content ? (
+                            <span className="thinking-dots">
+                              <span /><span /><span />
+                            </span>
+                          ) : (
+                            <div className="markdown-body max-w-none">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {m.content}
+                              </ReactMarkdown>
+                              {m.streaming && <span className="typing-cursor" />}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 图表渲染 */}
+                        {m.chart && (
+                          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+                            <ChartRenderer
+                              chartType={m.chart.chartType}
+                              title={m.chart.title}
+                              data={m.chart.data}
+                            />
                           </div>
                         )}
                       </div>
-
-                      {/* 图表渲染 */}
-                      {m.chart && (
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <ChartRenderer
-                            chartType={m.chart.chartType}
-                            title={m.chart.title}
-                            data={m.chart.data}
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -306,9 +326,15 @@ export default function Home() {
 
               {/* 工具调用过程可视化 */}
               {toolTrace.length > 0 && (
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] space-y-1.5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-3">
-                    <p className="text-xs font-medium text-slate-500">⚙️ Agent 工具调用</p>
+                <div className="flex justify-start pl-10">
+                  <div className="space-y-1.5 rounded-2xl border border-blue-100 bg-blue-50/40 p-3.5">
+                    <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-blue-500">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Agent 工具调用
+                    </p>
                     {toolTrace.map((t) => (
                       <div key={t.id} className="flex items-center gap-2 text-xs">
                         <span
@@ -320,10 +346,12 @@ export default function Home() {
                               : 'bg-red-400'
                           }`}
                         />
-                        <span className="font-mono text-slate-600">{t.toolName}</span>
+                        <span className="font-mono font-medium text-blue-700">{t.toolName}</span>
                         <span className="text-slate-400">{t.label}</span>
                         {t.status === 'done' && (
-                          <span className="text-emerald-500">✓</span>
+                          <svg className="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
                         )}
                       </div>
                     ))}
@@ -336,39 +364,41 @@ export default function Home() {
           </div>
 
           {/* 输入区 */}
-          <div className="border-t border-slate-200 p-4">
+          <div className="border-t border-slate-200/70 bg-slate-50/50 p-4">
             <div className="flex items-end gap-3">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
+              <div className="flex flex-1 items-end rounded-2xl border border-slate-200 bg-white px-1 shadow-sm transition focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-100">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  rows={1}
+                  placeholder={
+                    tableMeta
+                      ? '用自然语言提问，例如：统计各类案件的判决数量'
+                      : '请先上传数据文件开始分析'
                   }
-                }}
-                rows={1}
-                placeholder={
-                  tableMeta
-                    ? '用自然语言提问，例如：统计各类案件的判决数量'
-                    : '请先上传数据文件开始分析'
-                }
-                disabled={isStreaming}
-                className="max-h-40 flex-1 resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 disabled:bg-slate-50"
-              />
-              <button
-                onClick={handleSend}
-                disabled={isStreaming || !input.trim()}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {isStreaming ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14m-6-6l6 6-6 6" />
-                  </svg>
-                )}
-              </button>
+                  disabled={isStreaming}
+                  className="max-h-40 flex-1 resize-none bg-transparent px-3 py-3 text-sm outline-none placeholder:text-slate-400 disabled:opacity-60"
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={isStreaming || !input.trim()}
+                  className="brand-gradient m-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-md shadow-blue-500/25 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30 disabled:shadow-none"
+                >
+                  {isStreaming ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14m-6-6l6 6-6 6" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
             <p className="mt-2 text-center text-xs text-slate-400">
               律析可能产生不准确的分析结果，请结合实际情况判断 · Enter 发送，Shift+Enter 换行
