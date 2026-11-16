@@ -45,6 +45,50 @@ const SYSTEM_PROMPT = `你是一位专业的法律数据分析助手，名字叫
 5. 用简洁、清晰的 Markdown 组织回答（可用表格、列表）。
 6. 结合法律领域背景给出专业解读。`;
 
+// DeepSeek 直连配置（纯静态部署：无服务端代理，密钥以 NEXT_PUBLIC_ 前缀在构建时内联进前端）
+const DEEPSEEK_API_KEY = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY || '';
+const DEEPSEEK_BASE_URL = process.env.NEXT_PUBLIC_DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
+const DEEPSEEK_MODEL = process.env.NEXT_PUBLIC_DEEPSEEK_MODEL || 'deepseek-chat';
+
+// 工具定义（Function Calling）—— 供 Agent 自主调用
+const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'query_data',
+      description:
+        '对已导入的数据表执行 SQL 查询。当用户希望统计、筛选、聚合或分析数据时调用此工具。',
+      parameters: {
+        type: 'object',
+        properties: {
+          sql: { type: 'string', description: '要执行的 SQL 查询语句（DuckDB 方言）' },
+        },
+        required: ['sql'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'generate_chart',
+      description:
+        '根据数据查询结果，生成适合可视化的图表配置。当用户想看趋势、对比、占比等图表时调用。',
+      parameters: {
+        type: 'object',
+        properties: {
+          chartType: {
+            type: 'string',
+            enum: ['bar', 'line', 'pie', 'scatter'],
+            description: '图表类型',
+          },
+          title: { type: 'string', description: '图表标题' },
+        },
+        required: ['chartType', 'title'],
+      },
+    },
+  },
+];
+
 /**
  * 构建发送给 LLM 的消息列表
  */
@@ -119,15 +163,30 @@ export async function runAgent(
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
     onEvent({ type: 'thinking', content: iteration === 0 ? '正在分析您的问题…' : '正在基于工具结果整理答案…' });
 
-    const response = await fetch('/api/chat', {
+    if (!DEEPSEEK_API_KEY) {
+      onEvent({ type: 'error', content: '未配置 DeepSeek API Key，请在 .env.local 中填入 NEXT_PUBLIC_DEEPSEEK_API_KEY' });
+      return;
+    }
+
+    const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        messages,
+        tools: TOOLS,
+        tool_choice: 'auto',
+        stream: true,
+        temperature: 0.3,
+      }),
     });
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      onEvent({ type: 'error', content: err.error || '调用大模型失败，请检查 API Key 配置' });
+      onEvent({ type: 'error', content: err.error?.message || '调用大模型失败，请检查 API Key 配置' });
       return;
     }
 
@@ -142,20 +201,22 @@ export async function runAgent(
 
     const reader = response.body.getReader();
     for await (const chunk of parseSSE(reader)) {
-      if (chunk.content) {
-        contentChunks += chunk.content;
-        onEvent({ type: 'delta', content: chunk.content });
+      const delta = chunk.choices?.[0]?.delta;
+      if (!delta) continue;
+      if (delta.content) {
+        contentChunks += delta.content;
+        onEvent({ type: 'delta', content: delta.content });
       }
-      if (chunk.tool_calls) {
-        for (const tc of chunk.tool_calls) {
+      if (delta.tool_calls) {
+        for (const tc of delta.tool_calls) {
           const idx = tc.index ?? 0;
           const existing = toolCallsMap.get(String(idx)) || {
             id: tc.id || '',
             name: '',
             arguments: '',
           };
-          if (tc.name) existing.name = tc.name;
-          if (tc.arguments) existing.arguments += tc.arguments;
+          if (tc.function?.name) existing.name = tc.function.name;
+          if (tc.function?.arguments) existing.arguments += tc.function.arguments;
           toolCallsMap.set(String(idx), existing);
         }
       }
