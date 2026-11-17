@@ -29,7 +29,17 @@ interface ToolTrace {
   label: string;
 }
 
+// 示例问题（桌面端侧栏与手机端抽屉共用）
+const QUESTION_EXAMPLES = [
+  '统计各类案件的判决数量',
+  '近五年案件数量趋势如何？',
+  '原告胜诉率最高的是哪类案件？',
+  '各地区案件分布占比',
+  '分析被告类型的构成',
+];
+
 export default function Home() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [tableMeta, setTableMeta] = useState<TableMeta | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
@@ -217,6 +227,17 @@ export default function Home() {
                 等待上传数据
               </span>
             )}
+
+            {/* 手机端：打开数据上传抽屉 */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-blue-500 lg:hidden"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              数据
+            </button>
           </div>
         </div>
       </header>
@@ -231,13 +252,7 @@ export default function Home() {
             <h3 className="mb-1 text-sm font-semibold text-slate-800">可以这样问</h3>
             <p className="mb-3 text-xs text-slate-400">点击下方问题快速填入</p>
             <ul className="space-y-2 text-xs text-slate-600">
-              {[
-                '统计各类案件的判决数量',
-                '近五年案件数量趋势如何？',
-                '原告胜诉率最高的是哪类案件？',
-                '各地区案件分布占比',
-                '分析被告类型的构成',
-              ].map((q) => (
+              {QUESTION_EXAMPLES.map((q) => (
                 <li
                   key={q}
                   className="group flex cursor-pointer items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition hover:border-blue-200 hover:bg-blue-50/60"
@@ -406,6 +421,60 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      {/* 手机端：数据上传抽屉 */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* 遮罩 */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* 抽屉面板（底部弹出） */}
+          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-5 pb-8 shadow-2xl">
+            {/* 顶部把手 + 关闭按钮 */}
+            <div className="mb-4 flex items-center justify-between">
+              <div className="mx-auto h-1 w-10 rounded-full bg-slate-300" />
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 数据上传 */}
+            <DataUpload onDataLoaded={setTableMeta} />
+
+            {/* 示例问题 */}
+            <div className="card-shadow mt-4 rounded-2xl border border-slate-200/70 bg-white p-5">
+              <h3 className="mb-1 text-sm font-semibold text-slate-800">可以这样问</h3>
+              <p className="mb-3 text-xs text-slate-400">点击下方问题快速填入</p>
+              <ul className="space-y-2 text-xs text-slate-600">
+                {QUESTION_EXAMPLES.map((q) => (
+                  <li
+                    key={q}
+                    className="group flex cursor-pointer items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition hover:border-blue-200 hover:bg-blue-50/60"
+                    onClick={() => {
+                      if (isStreaming) return;
+                      setInput(q);
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    <svg className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01" />
+                    </svg>
+                    <span className="group-hover:text-blue-600">{q}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
