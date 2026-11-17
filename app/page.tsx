@@ -9,6 +9,8 @@ import { runAgent } from '@/lib/agent';
 import type { ChatMessage } from '@/lib/agent';
 import { runQuery } from '@/lib/duckdb';
 import type { TableMeta, QueryResult } from '@/lib/duckdb';
+import { ANALYSIS_TEMPLATES, TEMPLATE_GROUPS } from '@/lib/templates';
+import { generateOverview } from '@/lib/overview';
 
 interface DisplayMessage {
   id: string;
@@ -20,6 +22,8 @@ interface DisplayMessage {
     data: QueryResult;
   };
   streaming?: boolean;
+  /** 回答后的「你还可以这样问」追问建议 */
+  followUps?: string[];
 }
 
 interface ToolTrace {
@@ -28,15 +32,6 @@ interface ToolTrace {
   status: 'running' | 'done' | 'error';
   label: string;
 }
-
-// 示例问题（桌面端侧栏与手机端抽屉共用）
-const QUESTION_EXAMPLES = [
-  '统计各类案件的判决数量',
-  '近五年案件数量趋势如何？',
-  '原告胜诉率最高的是哪类案件？',
-  '各地区案件分布占比',
-  '分析被告类型的构成',
-];
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,6 +48,52 @@ export default function Home() {
   const scrollToBottom = useCallback(() => {
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
   }, []);
+
+  /**
+   * 生成「你还可以这样问」追问建议：从模板池选 3 个，排除与当前问题重复的
+   */
+  const buildFollowUps = useCallback((currentQuestion: string): string[] => {
+    const candidates = ANALYSIS_TEMPLATES.map((t) => t.question);
+    const filtered = candidates.filter((q) => q !== currentQuestion);
+    // 无重复依赖的简单轮换：按当前问题在数组中的位置偏移取 3 个
+    const startIdx = candidates.indexOf(currentQuestion);
+    const picks: string[] = [];
+    for (let i = 0; i < filtered.length && picks.length < 3; i++) {
+      const idx = (startIdx + i + 1) % candidates.length;
+      const q = candidates[idx];
+      if (q !== currentQuestion && !picks.includes(q)) picks.push(q);
+    }
+    return picks;
+  }, []);
+
+  /**
+   * 数据加载回调：设置表元数据 + 自动生成概览
+   */
+  const handleDataLoaded = useCallback(
+    async (meta: TableMeta) => {
+      setTableMeta(meta);
+      setMessages([]);
+      setToolTrace([]);
+
+      // 生成概览
+      try {
+        const overview = await generateOverview();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `overview-${Date.now()}`,
+            role: 'assistant',
+            content: overview.markdown,
+            chart: overview.chart,
+          },
+        ]);
+        scrollToBottom();
+      } catch {
+        // 概览失败不阻塞使用
+      }
+    },
+    [scrollToBottom]
+  );
 
   /**
    * 工具执行器：将 Agent 的工具调用映射到真实的数据操作
@@ -111,11 +152,21 @@ export default function Home() {
     let finalChart: DisplayMessage['chart'];
     let accumulated = '';
 
-    const updateAssistant = (content: string, chart?: DisplayMessage['chart']) => {
+    const updateAssistant = (
+      content: string,
+      chart?: DisplayMessage['chart'],
+      followUps?: string[]
+    ) => {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
-            ? { ...m, content, chart: chart ?? m.chart, streaming: false }
+            ? {
+                ...m,
+                content,
+                chart: chart ?? m.chart,
+                followUps: followUps ?? m.followUps,
+                streaming: false,
+              }
             : m
         )
       );
@@ -175,7 +226,7 @@ export default function Home() {
             }
 
             case 'done':
-              updateAssistant(accumulated, finalChart);
+              updateAssistant(accumulated, finalChart, buildFollowUps(question));
               break;
 
             case 'error':
@@ -195,7 +246,7 @@ export default function Home() {
     } finally {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, tableMeta, toolExecutor, scrollToBottom]);
+  }, [input, isStreaming, tableMeta, toolExecutor, scrollToBottom, buildFollowUps]);
 
   return (
     <div className="page-bg flex h-screen flex-col">
@@ -246,25 +297,34 @@ export default function Home() {
       <main className="mx-auto flex w-full max-w-6xl flex-1 gap-6 overflow-hidden px-6 py-5">
         {/* 左侧：数据上传 + 说明 */}
         <aside className="hidden w-72 shrink-0 overflow-y-auto pr-1 lg:block">
-          <DataUpload onDataLoaded={setTableMeta} />
+          <DataUpload onDataLoaded={handleDataLoaded} />
 
           <div className="card-shadow mt-4 rounded-2xl border border-slate-200/70 bg-white p-5">
-            <h3 className="mb-1 text-sm font-semibold text-slate-800">可以这样问</h3>
-            <p className="mb-3 text-xs text-slate-400">点击下方问题快速填入</p>
-            <ul className="space-y-2 text-xs text-slate-600">
-              {QUESTION_EXAMPLES.map((q) => (
-                <li
-                  key={q}
-                  className="group flex cursor-pointer items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition hover:border-blue-200 hover:bg-blue-50/60"
-                  onClick={() => !isStreaming && setInput(q)}
-                >
-                  <svg className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01" />
-                  </svg>
-                  <span className="group-hover:text-blue-600">{q}</span>
-                </li>
+            <h3 className="mb-1 text-sm font-semibold text-slate-800">分析模板</h3>
+            <p className="mb-3 text-xs text-slate-400">点击下方维度快速分析</p>
+            <div className="space-y-3">
+              {TEMPLATE_GROUPS.map((group) => (
+                <div key={group.category}>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    {group.category}
+                  </p>
+                  <div className="space-y-1.5">
+                    {group.items.map((t) => (
+                      <button
+                        key={t.label}
+                        onClick={() => !isStreaming && setInput(t.question)}
+                        className="group flex w-full items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-xs text-slate-600 transition hover:border-blue-200 hover:bg-blue-50/60"
+                      >
+                        <svg className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01" />
+                        </svg>
+                        <span className="group-hover:text-blue-600">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         </aside>
 
@@ -331,6 +391,24 @@ export default function Home() {
                               title={m.chart.title}
                               data={m.chart.data}
                             />
+                          </div>
+                        )}
+
+                        {/* 你还可以这样问 */}
+                        {m.followUps && m.followUps.length > 0 && (
+                          <div className="pt-1">
+                            <p className="mb-1.5 text-xs font-medium text-slate-400">你还可以这样问</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {m.followUps.map((q) => (
+                                <button
+                                  key={q}
+                                  onClick={() => !isStreaming && setInput(q)}
+                                  className="rounded-full border border-blue-100 bg-blue-50/50 px-3 py-1 text-xs text-blue-600 transition hover:border-blue-300 hover:bg-blue-100/60"
+                                >
+                                  {q}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -447,30 +525,39 @@ export default function Home() {
             </div>
 
             {/* 数据上传 */}
-            <DataUpload onDataLoaded={setTableMeta} />
+            <DataUpload onDataLoaded={handleDataLoaded} />
 
-            {/* 示例问题 */}
+            {/* 分析模板 */}
             <div className="card-shadow mt-4 rounded-2xl border border-slate-200/70 bg-white p-5">
-              <h3 className="mb-1 text-sm font-semibold text-slate-800">可以这样问</h3>
-              <p className="mb-3 text-xs text-slate-400">点击下方问题快速填入</p>
-              <ul className="space-y-2 text-xs text-slate-600">
-                {QUESTION_EXAMPLES.map((q) => (
-                  <li
-                    key={q}
-                    className="group flex cursor-pointer items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition hover:border-blue-200 hover:bg-blue-50/60"
-                    onClick={() => {
-                      if (isStreaming) return;
-                      setInput(q);
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    <svg className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01" />
-                    </svg>
-                    <span className="group-hover:text-blue-600">{q}</span>
-                  </li>
+              <h3 className="mb-1 text-sm font-semibold text-slate-800">分析模板</h3>
+              <p className="mb-3 text-xs text-slate-400">点击下方维度快速分析</p>
+              <div className="space-y-3">
+                {TEMPLATE_GROUPS.map((group) => (
+                  <div key={group.category}>
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                      {group.category}
+                    </p>
+                    <div className="space-y-1.5">
+                      {group.items.map((t) => (
+                        <button
+                          key={t.label}
+                          onClick={() => {
+                            if (isStreaming) return;
+                            setInput(t.question);
+                            setMobileMenuOpen(false);
+                          }}
+                          className="group flex w-full items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-xs text-slate-600 transition hover:border-blue-200 hover:bg-blue-50/60"
+                        >
+                          <svg className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01" />
+                          </svg>
+                          <span className="group-hover:text-blue-600">{t.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           </div>
         </div>
